@@ -1,0 +1,89 @@
+!pip install pygad
+import pygad
+import numpy as np
+import pandas as pd
+ 
+df  = pd.read_excel("C:\Users\user\Desktop\raw data 306.xlsx")
+Q6  = np.array(df["Q6"])
+Q7  = np.array(df["Q7"])
+Q8  = np.array(df["Q8"])
+Q9  = np.array(df["Q9"])
+
+
+def LL(mu):
+     def VG(mu, p, a, b, alpha=0.61):
+        if p == 1 or b == 0:
+            return (mu*a - np.exp(- mu * a)+1 )* p ** alpha / ( (p ** alpha) + (1-p) ** alpha) ** (1 / alpha)
+        else:
+            return (
+               (mu*a- np.exp(- mu * a)+1 ) * p ** alpha / ( (p ** alpha) + (1-p) ** alpha) ** (1 / alpha) +
+               (mu*b- np.exp(- mu * b)+1 ) * p ** alpha / ( (p ** alpha) + (1-p) ** alpha) ** (1 / alpha)
+             )
+ 
+     def cal_LL_by_Q(mu, Q, p1, a, b, p2, c, d):
+         VG1 = VG(mu, p1, a, b)
+         VG2 = VG(mu, p2, c, d)
+         h1 = (Q == 1).astype(float)
+         h2 = (Q == 2).astype(float)
+         _LL = (
+             h1 * np.log(1 / (1 + np.exp(VG2 - VG1))) +
+         h2 * np.log(1 / (1 + np.exp(VG1 - VG2)))
+         )
+         return _LL.sum()
+     return (
+        cal_LL_by_Q(mu, Q6,  0.5, 2000, 0,    1, 1000, 0) +
+        cal_LL_by_Q(mu, Q7,  0.8,   45, 0,    1,   30, 0) +
+        cal_LL_by_Q(mu, Q8,  0.2,  130, 0, 0.25,  100, 0) +
+        cal_LL_by_Q(mu, Q9, 0.01, 6000, 0, 0.02, 3000, 0)
+    )
+def fitness_func(_mu, _idx):
+    l = LL(np.exp(_mu))              # make mu \in (0, +\inf)
+    if l != l:                       # nan
+        l = -10000000
+    return l
+
+
+fitness_function = fitness_func
+
+num_generations = 100
+num_parents_mating = 4
+
+sol_per_pop = 50
+num_genes = 1
+
+init_range_low = -1
+init_range_high = 1
+
+parent_selection_type = "rws"
+keep_parents = 1
+
+crossover_type = "single_point"
+crossover_probability = 0.8
+mutation_probability = 0.01
+
+mutation_type = "random"
+mutation_percent_genes = 20
+
+ga_instance = pygad.GA(
+    num_generations=num_generations,
+    num_parents_mating=num_parents_mating,
+    fitness_func=fitness_function,
+    sol_per_pop=sol_per_pop,
+    num_genes=num_genes,
+    init_range_low=init_range_low,
+    init_range_high=init_range_high,
+    parent_selection_type=parent_selection_type,
+    keep_parents=keep_parents,
+    crossover_type=crossover_type,
+    crossover_probability=crossover_probability,
+    mutation_type=mutation_type,
+    mutation_percent_genes=mutation_percent_genes
+)
+
+ga_instance.run()
+
+#ga_instance.plot_fitness()
+
+solution, solution_fitness, solution_idx = ga_instance.best_solution()
+print("Best mu : {mu}".format(mu=np.exp(solution)))
+# print("Fitness value of the best solution = {solution_fitness}".format(solution_fitness=solution_fitness))
